@@ -32,3 +32,15 @@ No AI matching, payments, external social publishing, native mobile applications
 - Updated the credits to Meazbah Mehedi and Monika, both Developer & Designer.
 - Gave both developers equal configurable profile cards; refreshed the footer and README credits.
 - Updated instructions, tests and screenshots for both login paths.
+
+## 1.2.0 — 2026-10-29
+
+- Replaced administrator access to student workflows with a dedicated management-only workspace and server-enforced restrictions.
+- Added publication review for new/edited reports: pending, corrections requested, approved and rejected.
+- Protected unpublished details and photographs; preserved existing published records during schema migration.
+- Added private report decision history, student/admin notifications and structured activity entries with actor/state/reason/time.
+- Added management dashboard, report queues, handover queue, collection arrangements, student history/access controls, filtered analytics and campus settings.
+- Added CSV/PDF exports of filtered report summaries without private claim evidence; guarded CSV against spreadsheet-formula injection.
+- Kept closure distinct from confirmed return, and prevented reopening from reactivating previous claims.
+- Updated documentation, screenshots, migration coverage and management workflow tests.
+- Corrected Windows PowerShell launch examples to `.\start.bat`.

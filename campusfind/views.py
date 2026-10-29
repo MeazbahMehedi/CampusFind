@@ -7,13 +7,15 @@ bp = Blueprint("views", __name__)
 
 
 def visible_items():
-    return db.select(Item).where(Item.is_hidden.is_(False))
+    return db.select(Item).where(Item.is_hidden.is_(False), Item.review_status == "approved")
 
 
 def totals():
     return {
         key: db.session.scalar(
-            db.select(db.func.count()).select_from(Item).where(Item.is_hidden.is_(False), condition)
+            db.select(db.func.count())
+            .select_from(Item)
+            .where(Item.is_hidden.is_(False), Item.review_status == "approved", condition)
         )
         for key, condition in {
             "lost": (Item.kind == "lost") & Item.status.in_(("reported", "claim_pending")),
@@ -26,6 +28,8 @@ def totals():
 
 @bp.get("/")
 def home():
+    if current_user.is_authenticated and current_user.is_admin:
+        return redirect(url_for("admin.overview"))
     items = db.session.scalars(
         visible_items()
         .where(Item.status.in_(("reported", "claim_pending")))
@@ -43,6 +47,8 @@ def about():
 @bp.get("/dashboard")
 @login_required
 def dashboard():
+    if current_user.is_admin:
+        return redirect(url_for("admin.overview"))
     items = db.session.scalars(
         db.select(Item).where(Item.owner_id == current_user.id).order_by(Item.created_at.desc())
     ).all()

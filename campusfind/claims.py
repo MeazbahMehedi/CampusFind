@@ -5,18 +5,23 @@ from sqlalchemy.exc import IntegrityError
 from .forms import ClaimForm, MessageForm, ReviewForm
 from .models import Claim, ClaimMessage, Item, db, now
 from .reports import get_visible
-from .services import event, notify, refresh_item
+from .services import event, notify, notify_admins, refresh_item, student_required
 
 bp = Blueprint("claims", __name__, url_prefix="/claims")
 
 
 @bp.post("/item/<int:item_id>")
-@login_required
+@student_required
 def create(item_id):
     item = get_visible(item_id)
     if item.owner_id == current_user.id:
         abort(403)
-    if item.kind != "found" or item.is_hidden or item.status not in {"reported", "claim_pending"}:
+    if (
+        item.kind != "found"
+        or item.is_hidden
+        or item.review_status != "approved"
+        or item.status not in {"reported", "claim_pending"}
+    ):
         flash("This item is not accepting ownership claims.", "error")
         return redirect(url_for("reports.detail", item_id=item.id))
     form = ClaimForm()
@@ -37,6 +42,7 @@ def create(item_id):
                     Item.id == item.id,
                     Item.reserved_claim_id.is_(None),
                     Item.is_hidden.is_(False),
+                    Item.review_status == "approved",
                     Item.status.in_(("reported", "claim_pending")),
                 )
                 .values(status="claim_pending", updated_at=now())
@@ -62,6 +68,7 @@ def create(item_id):
                 "Your found-item report received a claim",
                 f"An administrator will verify ownership for {item.title}.",
             )
+            notify_admins("New ownership claim", item.title, claim_id=claim.id)
             db.session.commit()
             flash("Claim submitted. Your evidence is private.", "success")
             return redirect(url_for("claims.detail", claim_id=claim.id))
@@ -77,13 +84,23 @@ def detail(claim_id):
     claim = db.get_or_404(Claim, claim_id)
     if claim.claimant_id != current_user.id and not current_user.is_admin:
         abort(403)
+    review_form = ReviewForm()
+    review_form.action.choices = (
+        [("return", "Confirm physical handover")]
+        if claim.status == "approved"
+        else [
+            ("needs_info", "Request more information"),
+            ("approve", "Approve ownership claim"),
+            ("reject", "Reject ownership claim"),
+        ]
+    )
     return render_template(
-        "claim_detail.html", claim=claim, form=MessageForm(), review_form=ReviewForm()
+        "claim_detail.html", claim=claim, form=MessageForm(), review_form=review_form
     )
 
 
 @bp.post("/<int:claim_id>/message")
-@login_required
+@student_required
 def message(claim_id):
     claim = db.get_or_404(Claim, claim_id)
     if claim.claimant_id != current_user.id:
@@ -96,6 +113,7 @@ def message(claim_id):
             ClaimMessage(claim_id=claim.id, author_id=current_user.id, body=form.body.data.strip())
         )
         claim.status = "pending"
+        notify_admins("Claim clarification received", claim.item.title, claim_id=claim.id)
         db.session.commit()
         flash("Your information has been sent for review.", "success")
     else:
@@ -105,7 +123,7 @@ def message(claim_id):
 
 
 @bp.post("/<int:claim_id>/withdraw")
-@login_required
+@student_required
 def withdraw(claim_id):
     claim = db.get_or_404(Claim, claim_id)
     if claim.claimant_id != current_user.id:

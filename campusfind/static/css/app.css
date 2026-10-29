@@ -3411,3 +3411,21 @@ dialog .button-row {
 .team-pair .button-row:not(:empty) { margin-top: 22px; }
 @media (max-width: 1100px) and (min-width: 761px) { .login-options { grid-template-columns: 1fr; } }
 @media (max-width: 520px) { .login-options { grid-template-columns: 1fr; gap: 10px; } .login-option { padding: 13px; gap: 12px; } .login-option span { font-size: 12px; } .login-option small { font-size: 10px; } .team-pair { grid-template-columns: 1fr; } .team-pair .team-card { padding: 26px; } .auth-panel { padding: 23px; } }
+
+/* Management workspace: actionable queues and publication review. */
+.management-stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:17px; margin-bottom:32px; }
+.management-stats .stat-card { transition:border-color .15s,transform .15s; }
+.management-stats .stat-card:hover { border-color:var(--accent); transform:translateY(-2px); }
+.admin-sidebar-note { display:flex; gap:10px; color:var(--muted); padding:12px 9px 22px; font-size:9px; line-height:1.8; }
+.admin-sidebar-note .icon { color:var(--accent); margin-top:3px; }
+.audit-reason { min-width:200px; max-width:360px; overflow-wrap:anywhere; font-size:10px; }
+.settings-form { max-width:1100px; }
+.settings-form .field textarea { font-family:inherit; }
+.status-needs_changes { color:var(--amber); background:var(--amber-soft); }
+.status-published { color:var(--accent); background:var(--accent-soft); }
+.claim-summary-row { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 0; border-bottom:1px solid var(--border); }
+.claim-summary-row:last-child { border-bottom:0; }
+.claim-summary-row small { display:block; margin-top:5px; }
+.management-filters .filter-footer { gap:12px; }
+@media(max-width:1000px) { .management-stats { gap:12px; } }
+@media(max-width:520px) { .management-stats { grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; } .management-stats .stat-card { padding:17px 13px; } .management-stats .stat-card>.stat-icon { display:grid; } .inline-filter { flex-wrap:wrap; } .management-filters .filter-footer { font-size:8px; align-items:flex-start; } }

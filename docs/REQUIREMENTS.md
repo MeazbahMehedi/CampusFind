@@ -1,66 +1,57 @@
-# Requirements and proposal traceability
+# Requirements and proposal traceability — 1.2.0
 
-Version: 1.1.0. Scope baseline: the supplied Campus Lost-and-Found Management System semester proposal. This release implements the proposed application in addition to its planning deliverables. Requirements below distinguish proposal features from supporting additions.
+The project implements the proposal's lost reporting, found reporting, item search and claim/status management. Version 1.2.0 refines the administrator into a management-only role and introduces publication review before public listing.
 
-## Users
+## Roles and boundaries
 
-**Visitor:** searches visible reports and reads item details. **Student:** registers, reports items, submits private ownership claims, tracks progress, and manages their own account. **Administrator:** reviews evidence, moderates reports, manages student access, and records returns. A trusted local operator creates administrator accounts and performs database maintenance.
+| Role | Allowed functions | Restricted functions |
+|---|---|---|
+| Visitor | Browse approved visible listings, view public details | Private records, submission, claims and management |
+| Student | Submit/edit reports, respond to corrections, search, claim eligible found items, answer clarification, track notifications | Publication approval, management settings, other students' private evidence |
+| Administrator | Publication review, claim decisions, handovers, report lifecycle, student access/history, analytics, exports, settings, activity review | Student report creation/edit/closure routes, submitting/withdrawing claims, claimant replies |
+| Local operator | Initialize/migrate database, configure/reset administrator credentials, back up/reset local data | This trusted filesystem role is outside web account permissions |
 
 ## Functional requirements
 
-| ID | Requirement | Proposal mapping | Implementation |
-|---|---|---|---|
-| FR-01 | Submit a lost report with title, description, location, date, category and optional photo | Feature 1 | Report form and item records |
-| FR-02 | Submit a found report with the same structured details | Feature 2 | Report form and item records |
-| FR-03 | Search name/description and combine category, location and date filters | Feature 3 | Browse page with sorting and pagination |
-| FR-04 | Submit ownership evidence for a found item | Feature 4 | Private claim form |
-| FR-05 | Administrator reviews, requests clarification, approves or rejects with a reason | Feature 4 | Claim conversation and review actions |
-| FR-06 | Track item and claim status | Feature 4 | Dashboard, badges, report history and notifications |
-| FR-07 | Confirm physical return after approval | Administrator requirements | Separate handover action |
-| FR-08 | Hide duplicate/inappropriate/invalid listings | Administrator requirements | Hide-and-close moderation, preserving history |
-| FR-09 | Register, log in, log out, edit profile and change password | Supporting addition | Student accounts and roles |
-| FR-10 | Notify students of claim and moderation changes | Supporting addition | Per-user in-app notification records |
-| FR-11 | Display administrative statistics and action history | Supporting addition | Charts and audit records |
-| FR-12 | Keep developer/team branding editable in one file | User request | config/developer.json and README sync command |
+| ID | Requirement | Implementation |
+|---|---|---|
+| FR-01 | Students submit lost/found reports with structured details and optional photo | Student report form |
+| FR-02 | New reports remain private pending administrator publication approval | Item.review_status, visibility checks, review queue |
+| FR-03 | Administrators request corrections, approve or reject with a reason | Report moderation service and private ReportReview history |
+| FR-04 | Editing an eligible report requires renewed approval | Student edit/resubmit workflow |
+| FR-05 | Public search combines keyword/type/category/location/lifecycle/event dates | Approved-visible query with filters and pagination |
+| FR-06 | Students submit private ownership evidence for active approved found reports | Claim form and access checks |
+| FR-07 | Administrators request claim clarification, approve/reject with notes | Private claim conversation and decision service |
+| FR-08 | Approval reserves the item; handover separately records physical return | Reserved claim and returned_at timestamp |
+| FR-09 | Administrator assigns collection point/instructions and notifies student | Handover management |
+| FR-10 | Close/hide/restore/reopen eligible reports while preserving history | Publication/lifecycle moderation |
+| FR-11 | Search student accounts, inspect history, suspend/reactivate with reason | Student management screens |
+| FR-12 | Notify students of decisions and administrators of submissions/clarifications | User-scoped in-app notifications with record links |
+| FR-13 | Display actionable management totals, queues, trends and recent decisions | Management dashboard |
+| FR-14 | Filter report analytics and download matching CSV/PDF summaries | Admin-only analytics/export routes |
+| FR-15 | Record actor, record type/ID, previous/next state, reason and UTC time | Structured Audit entries |
+| FR-16 | Edit categories, locations, collection points and default instructions | CampusSetting records and validated settings form |
+| FR-17 | Keep developer/designer identities editable independently of application logic | config/developer.json and README sync |
 
-## Business rules
+## Key rules
 
-1. Public registration always creates a student. Posted role fields have no effect.
-2. A claim belongs to one student and one found-item report. Each student can submit one claim per report, including after rejection/withdrawal; this preserves the review history and prevents repeat spam. A mistaken claim requires administrator assistance or a new report when appropriate.
-3. Students cannot claim their own reports, or claims on lost/hidden/closed/returned/reserved items.
-4. Private evidence and claim messages are accessible only to the claimant and administrators, including when the public report is hidden. Report authors cannot inspect someone else's evidence.
-5. Only one claim can reserve an item. Approval rejects competing pending/clarification claims. A conditional database update guards reservation.
-6. Approval means awaiting handover, never an automatic physical return.
-7. Handover can be confirmed only for the approved claim assigned to that item.
-8. An administrator cannot review a claim that they submitted or a claim attached to their own report.
-9. Students may edit/close only their own visible open reports without active claims. Type cannot change after publication.
-10. Hiding an unreturned report closes it and rejects active claims. Restoring visibility does not automatically reopen a closed report. Returned items retain their returned state even if hidden.
-11. Administrator accounts cannot be disabled from the web screen. Disabled student sessions lose access on their next request. Existing reports remain for continuity until moderated separately.
-12. Optional photos are decoded, resized and re-encoded as JPEG, with metadata stripped. Photos on visible reports are public; users must avoid personal documents/numbers in them.
+1. Public registration always creates a student. Login selection does not assign or elevate a role.
+2. Only approved, non-hidden reports/photos are public. Pending/correction/rejected records are visible only to their author and administrators. A claimant can still read their own private claim history after the report closes or is hidden.
+3. Publication and ownership approvals are separate. A published listing is not proof of a claimant's ownership.
+4. Only one claim may reserve an item. Conditional database reservation protects competing approvals; other undecided claims are rejected with a reason. A unique item/claimant constraint prevents repeat claims, including after rejection/withdrawal.
+5. Only the approved reserved claim can be marked physically returned. Closing alone never increases confirmed-return counts.
+6. Closing a report rejects its active claims. Reopening retains previous claim decisions. Restoring visibility does not reopen a report. Returned reports cannot be reopened or changed to closed through normal management.
+7. Requesting corrections on a published report is allowed only before active claim review. Editing is limited to an author's visible, Reported report without active claims.
+8. Rejection closes an unpublished report. An administrator must reopen it before further student editing. A rejected report returns to pending publication when reopened; an already approved report retains approval when reopened.
+9. Administrators may view legacy reports/claims involving their accounts but cannot use student actions on them. An independent administrator must decide legacy claims involving the reviewer.
+10. Student suspension blocks sign-in and existing sessions on their next request. It preserves records and does not automatically hide their public listings.
+11. Saved category/location labels remain on historical reports even after administrator options change. Existing values remain available when editing those records.
+12. Exports include filtered report summaries and no private claim evidence. Analytics submission-date filters use UTC; public browse date filters use the date lost/found.
 
 ## Non-functional requirements
 
-| ID | Requirement | Acceptance approach |
-|---|---|---|
-| NFR-01 | Python 3.11+ and a reproducible local setup | Dependency lock, migration and CLI checks |
-| NFR-02 | Responsive desktop/mobile layout | Screenshot and overflow checks at desktop/mobile sizes |
-| NFR-03 | Light/dark themes with preference persistence | Browser theme toggle and reload check |
-| NFR-04 | Permission checks on every protected route | Unauthorized request tests |
-| NFR-05 | CSRF on all state-changing web requests | Missing-token rejection tests |
-| NFR-06 | Durable records across restarts | SQLite storage; operator backup procedure |
-| NFR-07 | Modular maintainable source | Blueprints, service functions, models, readable templates |
-| NFR-08 | No paid API or external assets needed at runtime | Local CSS, JavaScript and SVG assets |
-| NFR-09 | Meaningful failure feedback | Invalid form, upload, permission and not-found cases |
-| NFR-10 | Basic accessibility | Form labels, skip link, keyboard controls and reduced motion |
+Responsive layouts and two themes; CSRF protection; password hashing; per-route role/access checks; safe parameterized queries and HTML escaping; validated image re-encoding; local assets; migration-based upgrades; repeatable setup and tests; descriptive feedback; accessible labels/keyboard controls/reduced motion. No accessibility certification or high-load performance claim is made.
 
-Performance is suitable for local teaching/demo use; no latency or concurrent-user capacity is asserted without measurements. An accessibility certification is not claimed.
+## Scope and acceptance
 
-## Exclusions and assumptions
-
-The proposal excludes AI matching/image recognition, rewards/payments, automatic social publishing, and dedicated mobile applications. This release also omits SSO, verified campus membership, email verification, password-reset email delivery, location maps, and real-time messaging. Students coordinate handover through the administrator rather than public contact details.
-
-Campus locations are generic labels. Edit `LOCATIONS` in `campusfind/__init__.py` to suit a real campus. Developer identity is configurable independently in JSON. The app does not imply official university endorsement or ownership of its hosting infrastructure.
-
-## Acceptance
-
-A release is acceptable when a student can report/search an item, submit a private claim, respond to clarification, and receive an administrator-confirmed return; access restrictions and moderation remain effective throughout. See VALIDATION.md for test evidence and the manual checklist.
+No AI recognition, payments, social publishing, native mobile app, university SSO or email delivery. Notifications are in-app. Default deployment is one local SQLite-backed instance. Acceptance requires the full report review → claim verification → handover sequence and effective permission/privacy checks, plus safe closure/reopening and preserved records on upgrade. See VALIDATION.md.

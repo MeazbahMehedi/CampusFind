@@ -280,6 +280,11 @@ def register(app):
                 category=category,
                 location=location,
                 illustration=illustration,
+                review_status="pending"
+                if index in {4, 8}
+                else "needs_changes"
+                if index == 6
+                else "approved",
                 description=description,
                 event_date=(created - timedelta(hours=3)).date(),
                 created_at=created,

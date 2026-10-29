@@ -33,6 +33,7 @@ def app(tmp_path):
                 Item(
                     owner_id=2,
                     kind="found",
+                    review_status="approved",
                     title="Blue backpack",
                     description="A backpack found on the library desk.",
                     category="Bags",
@@ -42,6 +43,7 @@ def app(tmp_path):
                 Item(
                     owner_id=3,
                     kind="lost",
+                    review_status="approved",
                     title="Reading notebook",
                     description="A small notebook lost after class.",
                     category="Books",
@@ -63,7 +65,7 @@ def client(app):
 
 
 def token(client, path="/auth/login"):
-    response = client.get(path)
+    response = client.get(path, follow_redirects=True)
     match = re.search(rb'name="csrf_token"[^>]*value="([^"]+)"', response.data)
     assert match, (path, response.status_code)
     return match[1].decode()

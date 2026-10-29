@@ -13,33 +13,36 @@
          height="36"
          alt=""><span>{{ brand.project_name }}<small>THE CAMPUS CONNECTION</small></span></a>
     <div class="workspace-label"><span class="workspace-dot"></span> Campus community <span class="version-label">v{{ version }}</span></div>
-    <span class="nav-heading">DISCOVER</span>
+    {% set ep = request.endpoint or '' %}
     <nav>
-      {% set ep = request.endpoint or '' %}
-      <a class="nav-link {{ 'active' if ep=='views.home' }}"
-         href="{{ url_for('views.home') }}">{{ icon("home") }}Overview</a>
-      <a class="nav-link {{ 'active' if ep=='reports.browse' }}"
-         href="{{ url_for('reports.browse') }}">{{ icon("grid") }}Browse items</a>
-      <a class="nav-link {{ 'active' if ep=='reports.create' }}"
-         href="{{ url_for('reports.create') }}">{{ icon("plus-circle") }}Report an item</a>
-      {% if current_user.is_authenticated %}
-        <span class="nav-heading">YOUR WORKSPACE</span>
-        <a class="nav-link {{ 'active' if ep=='views.dashboard' }}"
-           href="{{ url_for('views.dashboard') }}">{{ icon("dashboard") }}My dashboard</a>
-        <a class="nav-link {{ 'active' if ep=='views.notifications' }}"
-           href="{{ url_for('views.notifications') }}">{{ icon("bell") }}Notifications{% if unread_count %}<span class="nav-count">{{ unread_count }}</span>{% endif %}</a>
-        {% if current_user.is_admin %}<span class="nav-heading">ADMINISTRATION</span><a class="nav-link {{ 'active' if ep.startswith('admin.') }}"
-   href="{{ url_for('admin.overview') }}">{{ icon("shield") }}Admin console</a>{% endif %}
+      {% if current_user.is_authenticated and current_user.is_admin %}
+        <span class="nav-heading">MANAGEMENT & CONTROL</span>
+        {% for endpoint,label,symbol in [('admin.overview','Dashboard','dashboard'),('admin.reports','Item reports','box'),('admin.claims','Ownership claims','shield'),('admin.handovers','Handovers','check-circle'),('admin.users','Students','heart'),('admin.analytics','Analytics & exports','grid'),('admin.activity','Activity log','clock'),('admin.settings','Campus settings','filter')] %}
+        <a class="nav-link {{ 'active' if ep==endpoint or (endpoint=='admin.users' and ep=='admin.student') or (endpoint=='admin.handovers' and ep=='admin.handover') }}" href="{{ url_for(endpoint) }}">{{ icon(symbol) }}{{ label }}</a>
+        {% endfor %}
+        <span class="nav-heading">ADMINISTRATOR</span>
+        <a class="nav-link {{ 'active' if ep=='views.notifications' }}" href="{{ url_for('views.notifications') }}">{{ icon('bell') }}Notifications{% if unread_count %}<span class="nav-count">{{ unread_count }}</span>{% endif %}</a>
+        <a class="nav-link {{ 'active' if ep=='auth.profile' }}" href="{{ url_for('auth.profile') }}">{{ icon('shield') }}Account settings</a>
+      {% else %}
+        <span class="nav-heading">DISCOVER</span>
+        <a class="nav-link {{ 'active' if ep=='views.home' }}" href="{{ url_for('views.home') }}">{{ icon('home') }}Overview</a>
+        <a class="nav-link {{ 'active' if ep=='reports.browse' }}" href="{{ url_for('reports.browse') }}">{{ icon('grid') }}Browse items</a>
+        <a class="nav-link {{ 'active' if ep=='reports.create' }}" href="{{ url_for('reports.create') }}">{{ icon('plus-circle') }}Report an item</a>
+        {% if current_user.is_authenticated %}
+          <span class="nav-heading">YOUR WORKSPACE</span>
+          <a class="nav-link {{ 'active' if ep=='views.dashboard' }}" href="{{ url_for('views.dashboard') }}">{{ icon('dashboard') }}My dashboard</a>
+          <a class="nav-link {{ 'active' if ep=='views.notifications' }}" href="{{ url_for('views.notifications') }}">{{ icon('bell') }}Notifications{% if unread_count %}<span class="nav-count">{{ unread_count }}</span>{% endif %}</a>
+        {% endif %}
       {% endif %}
-      <span class="nav-heading">COMMUNITY</span><a class="nav-link {{ 'active' if ep=='views.about' }}"
-   href="{{ url_for('views.about') }}">{{ icon("heart") }}About the project</a>
+      <span class="nav-heading">COMMUNITY</span>
+      <a class="nav-link {{ 'active' if ep=='views.about' }}" href="{{ url_for('views.about') }}">{{ icon('heart') }}About the project</a>
     </nav>
     <div class="sidebar-bottom">
-      <div class="help-card">
-        {{ icon('spark', 24) }}<strong>A small act. A big difference.</strong>
-        <p>Found something? A quick report could make someone's day.</p>
-        <a href="{{ url_for('reports.create',kind='found') }}">Help it find home {{ icon('arrow', 16) }}</a>
-      </div>
+      {% if current_user.is_authenticated and current_user.is_admin %}
+      <div class="admin-sidebar-note">{{ icon('shield',20) }} <span>Review reports. Verify ownership.<br>Confirm every return with care.</span></div>
+      {% else %}
+      <div class="help-card">{{ icon('spark',24) }}<strong>A small act. A big difference.</strong><p>Found something? A quick report could make someone's day.</p><a href="{{ url_for('reports.create',kind='found') }}">Help it find home {{ icon('arrow',16) }}</a></div>
+      {% endif %}
       {% if current_user.is_authenticated %}<div class="sidebar-profile"><a class="avatar" href="{{ url_for('auth.profile') }}">{{ current_user.name[:1]|upper }}</a><a class="profile-name" href="{{ url_for('auth.profile') }}"><strong>{{ current_user.name }}</strong><small>{{ current_user.role|title }} account</small></a><form method="post" action="{{ url_for('auth.logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="icon-btn" aria-label="Sign out" title="Sign out">{{ icon('logout', 18) }}</button></form></div>{% else %}<a class="btn primary full" href="{{ url_for('auth.login') }}">Choose your login {{ icon('arrow', 16) }}</a>{% endif %}
     </div>
   </aside>

@@ -41,6 +41,19 @@ class ItemForm(FlaskForm):
         ],
     )
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from .settings import campus_settings
+
+        values = campus_settings()
+        for field, key in [(self.category, "categories"), (self.location, "locations")]:
+            choices = list(values[key])
+            obj = kwargs.get("obj")
+            previous = getattr(obj, field.name, None) if obj else None
+            if previous and previous not in choices:
+                choices.append(previous)
+            field.choices = choices
+
     def validate_event_date(self, field):
         if field.data > date.today():
             raise ValidationError("The date cannot be in the future.")
@@ -88,6 +101,9 @@ class ModerateForm(FlaskForm):
     action = SelectField(
         "Action",
         choices=[
+            ("approve", "Approve report for publication"),
+            ("needs_changes", "Request corrections from student"),
+            ("reject", "Reject report"),
             ("hide", "Hide & close report"),
             ("restore", "Restore visibility"),
             ("close", "Close report"),
@@ -95,3 +111,54 @@ class ModerateForm(FlaskForm):
         ],
     )
     reason = TextAreaField("Reason", validators=[DataRequired(), Length(min=10, max=1000)])
+
+
+class AccessForm(FlaskForm):
+    reason = TextAreaField(
+        "Reason for access change", validators=[DataRequired(), Length(min=10, max=1000)]
+    )
+
+
+class HandoverForm(FlaskForm):
+    collection_point = SelectField("Collection point", validators=[DataRequired()])
+    note = TextAreaField(
+        "Collection instructions", validators=[DataRequired(), Length(min=10, max=2000)]
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from .settings import campus_settings
+
+        self.collection_point.choices = list(campus_settings()["collection_points"])
+
+
+class SettingsForm(FlaskForm):
+    categories = TextAreaField("Item categories", validators=[DataRequired(), Length(max=2000)])
+    locations = TextAreaField("Campus locations", validators=[DataRequired(), Length(max=4000)])
+    collection_points = TextAreaField(
+        "Collection points", validators=[DataRequired(), Length(max=3000)]
+    )
+    handover_instructions = TextAreaField(
+        "Default collection instructions", validators=[DataRequired(), Length(min=20, max=2000)]
+    )
+    reason = TextAreaField(
+        "Reason for settings change", validators=[DataRequired(), Length(min=10, max=1000)]
+    )
+
+    def validate_list(self, field, maximum_length):
+        values = [line.strip() for line in field.data.splitlines() if line.strip()]
+        if not 1 <= len(values) <= 30 or any(len(value) > maximum_length for value in values):
+            raise ValidationError(
+                f"Use 1–30 entries, one per line, each at most {maximum_length} characters."
+            )
+        if len({value.casefold() for value in values}) != len(values):
+            raise ValidationError("Remove duplicate entries.")
+
+    def validate_categories(self, field):
+        self.validate_list(field, 40)
+
+    def validate_locations(self, field):
+        self.validate_list(field, 100)
+
+    def validate_collection_points(self, field):
+        self.validate_list(field, 100)

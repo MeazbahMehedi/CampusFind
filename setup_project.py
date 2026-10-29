@@ -41,4 +41,4 @@ if args.demo:
 elif not configured_admin:
     print("Next, create an administrator:")
     print(f'"{python}" -m flask --app campusfind:create_app create-admin')
-print("Ready. Start with start.bat (Windows) or ./start.sh (Linux/macOS).")
+print(r"Ready. Start with .\start.bat in Windows PowerShell, or ./start.sh on Linux/macOS.")

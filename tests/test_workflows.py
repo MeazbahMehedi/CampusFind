@@ -190,12 +190,18 @@ def test_withdraw_refreshes_report(client, app):
         assert db.session.get(Claim, 1).status == "withdrawn"
 
 
-def test_admin_cannot_review_own_claim(client, app):
+def test_admin_cannot_submit_claim(client, app):
     login(client, "admin@example.com")
-    submit_claim(client)
-    assert b"different administrator" in review(client, "approve").data
+    response = client.post(
+        "/claims/item/1",
+        data={
+            "csrf_token": token(client, "/items/1"),
+            "evidence": "A claim is a student-only action.",
+        },
+    )
+    assert response.status_code == 403
     with app.app_context():
-        assert db.session.get(Claim, 1).status == "pending"
+        assert db.session.scalar(db.select(db.func.count()).select_from(Claim)) == 0
 
 
 def test_hide_cancels_claims_and_enforces_visibility(client, app):

@@ -1,116 +1,88 @@
-# System design
+# System design — 1.2.0
 
-## Architecture and responsibilities
+## Layers and modules
 
-The app follows a layered Flask structure. HTTP blueprints translate requests into validated forms and database operations. Authentication checks the signed session and loads an enabled account. Shared service functions handle claims, moderation transitions, notifications, event history, and image processing. SQLAlchemy persists domain records. Jinja templates render server-side HTML; JavaScript enhances interaction without replacing the server rules.
+Flask blueprints accept HTTP requests and validated forms. Role decorators separate student mutations from administrator controls. SQLAlchemy persists records, while Jinja/local CSS/JavaScript render the interface. `moderation.py` owns publication/lifecycle decisions; `services.py` groups ownership transitions, notifications, activity records and image handling. `settings.py` stores campus vocabulary, while `exports.py` produces administrator-only filtered summaries.
 
-| Module | Responsibility |
-|---|---|
-| `__init__.py` | Factory, configuration, extensions, branding, errors and response policy |
-| `models.py` | Schema and password hashing helpers |
-| `forms.py` | Type, length, choice, date and upload-extension validation |
-| `auth.py` | Registration, sign-in throttling, profile and password changes |
-| `reports.py` | Report creation/editing, filters, details, visibility-protected images |
-| `claims.py` | Student submission, clarification response, withdrawal |
-| `admin.py` | Reviews, moderation, account access and charts |
-| `services.py` | Shared business transitions and image re-encoding |
-| `views.py` | Home, dashboard, about and notifications |
-| `cli.py` | Migrations, admin creation, demo seed, recovery and explicit reset |
+The factory registers extensions, branding, policies, role-aware authentication redirects and error handling. `auth.py` handles separate login paths and account maintenance. `views.py` renders public/student pages and redirects administrators away from the student workspace. `reports.py` enforces student submission/editing and approved-public visibility. `claims.py` restricts submission/replies/withdrawals to students while permitting private review by administrators. `admin.py` owns management queues, handovers, account access/history, analytics and settings. `cli.py` performs local setup, migration, recovery, demo seeding and explicitly confirmed data resets.
 
-## Data model
+## Data relationships
 
 ```mermaid
 erDiagram
-    USER ||--o{ ITEM : reports
-    USER ||--o{ CLAIM : submits
+    USER ||--o{ ITEM : submits
+    ITEM ||--o{ REPORT_REVIEW : records
+    USER ||--o{ REPORT_REVIEW : decides
     ITEM ||--o{ CLAIM : receives
+    USER ||--o{ CLAIM : requests
     CLAIM ||--o{ CLAIM_MESSAGE : contains
     USER ||--o{ CLAIM_MESSAGE : writes
-    ITEM ||--o{ ITEM_EVENT : records
+    ITEM ||--o{ ITEM_EVENT : tracks
     USER ||--o{ NOTIFICATION : receives
-    CLAIM o|--o{ NOTIFICATION : references
     USER ||--o{ AUDIT : performs
 ```
 
-- **User:** display name, normalized unique email, password hash, role, access flag, timestamps.
-- **Item:** author, lost/found type, title, description, category, location, event date, photo reference, status, visibility, reserved claim identifier, timestamps.
-- **Claim:** item, claimant, private evidence, status, latest review note, reviewer, timestamps. A unique `(item_id, claimant_id)` constraint prevents duplicate claims.
-- **ClaimMessage:** private chronological clarification/review text with author/time.
-- **ItemEvent:** public generic report-history labels; no private evidence or claimant identity.
-- **Notification:** user-specific body, optional claim link, read flag and creation time.
-- **Audit:** administrator identity, action and timestamp.
-- **LoginAttempt:** hashed email identity and failure time for a rolling account limit. Old entries are pruned on login submissions.
+- **User:** name, normalized email, password hash, role, enabled flag and creation time.
+- **Item:** student author, lost/found details, image, publication review status/note/reviewer/time, lifecycle, hidden flag and reserved claim ID.
+- **ReportReview:** private chronological administrator decisions, action, note and timestamp.
+- **Claim:** private ownership evidence, claimant, status, review note/reviewer, collection point, handover instructions and physical-return timestamp.
+- **ClaimMessage:** private clarification/review conversation.
+- **ItemEvent:** generic report lifecycle history without ownership evidence.
+- **Notification:** recipient, body, read state, optional item/claim link and timestamp.
+- **Audit:** administrator, action, record type/ID, previous/next state, reason and UTC timestamp. Legacy entries retain their original action even when structured fields are empty.
+- **CampusSetting:** JSON-backed category/location/collection lists and default collection guidance.
+- **LoginAttempt:** hashed account identity and failed-sign-in timestamp for the rolling local limit.
 
-`reserved_claim_id` is maintained by business transitions rather than a circular foreign key; its matching item/claim relationship is checked before return. Reports and claims are preserved rather than hard-deleted by moderation. Default SQLite is intended for one local instance. Migrations track the schema in Alembic's version table.
+A unique `(item_id, claimant_id)` constraint prevents duplicate claims. `reserved_claim_id` is maintained by checked transitions rather than a circular foreign key; ownership and lifecycle must agree before a return. Related updates, notifications, messages and audit entries are committed together.
 
-## Item states
+## Separate publication and lifecycle
 
-| Current | Trigger | Next |
+| Publication state | Meaning | Public access |
 |---|---|---|
-| Reported | Valid claim | Claim pending |
-| Claim pending | All pending claims rejected/withdrawn | Reported |
-| Reported / Claim pending | Claim approved | Awaiting handover |
-| Awaiting handover | Approved claim physically handed over | Returned |
-| Unreturned | Administrator close/hide | Closed |
-| Reported, no active claim | Author closes report | Closed |
-| Closed and visible | Administrator reopens | Reported |
+| Pending | New or edited report awaits approval | Author/admin only |
+| Needs changes | Administrator requested corrections | Author/admin only |
+| Approved | Publication accepted | Public if not hidden |
+| Rejected | Review rejected; lifecycle closed | Author/admin only |
 
-Visibility is a separate boolean. Hiding a returned report leaves the returned status unchanged. An author closing a lost report does not inflate confirmed-return statistics.
+| Lifecycle | Meaning |
+|---|---|
+| Reported | Available report, subject to publication approval |
+| Claim pending | One or more ownership reviews remain undecided |
+| Awaiting handover | One claim is approved and reserves the item |
+| Returned | Physical handover confirmed |
+| Closed | Activity stopped without changing it into a confirmed return |
 
-## Claim states
+The hidden flag independently blocks public access. Closing/hiding an active report rejects its undecided/approved claims and clears reservation. Restoring visibility leaves lifecycle unchanged. Reopening preserves old claim decisions. Rejected reports become pending again; approved reports retain their publication approval. Returned reports cannot be reopened or changed to closed through normal moderation.
 
-```mermaid
-stateDiagram-v2
-    [*] --> Pending
-    Pending --> NeedsInformation: Administrator asks
-    NeedsInformation --> Pending: Claimant replies
-    Pending --> Approved: Ownership verified
-    NeedsInformation --> Approved: Ownership verified
-    Pending --> Rejected: Review rejected or report closed
-    NeedsInformation --> Rejected: Review rejected or report closed
-    Approved --> Rejected: Report closed before return
-    Pending --> Withdrawn: Claimant withdraws
-    NeedsInformation --> Withdrawn: Claimant withdraws
-    Approved --> Returned: Physical handover confirmed
-```
-
-Every administrative review requires a note. Rejected/withdrawn/returned claims cannot be reviewed again through the interface. Competing claims awaiting a decision are rejected when a claim is approved. Database transactions group associated status updates, notifications, messages and activity entries.
-
-## Use cases
-
-| Use case | Actor | Main flow | Alternatives |
-|---|---|---|---|
-| Report lost item | Student | Sign in → fill details → validate → publish | Invalid date/image gives field feedback |
-| Report found item | Student | Sign in → retain private identifying detail → publish | No photograph uses a labeled illustration |
-| Search reports | Visitor/student | Enter query → combine filters → inspect details | No matches displays reset guidance |
-| Claim found item | Student | Open found report → submit private evidence → track | Own, duplicate or inactive report is rejected |
-| Clarify evidence | Claimant/admin | Admin requests detail → claimant replies → pending review | Only requested clarifications accept replies |
-| Verify and return | Admin | Read evidence → approve → arrange handover → confirm | Incorrect claim rejected with reason |
-| Moderate report | Admin | Inspect report → action + reason → record | Cannot reopen hidden/returned report |
-| Manage student access | Admin | View accounts → disable/enable → audit | Admin accounts protected from this screen |
-
-## Claim review sequence
+## Main workflow
 
 ```mermaid
 sequenceDiagram
     participant Student
-    participant Flask
-    participant Database
+    participant App
     participant Admin
-    Student->>Flask: Submit claim and CSRF token
-    Flask->>Database: Validate item and save evidence
-    Database-->>Flask: Claim ID
-    Flask-->>Student: Private tracking page
-    Admin->>Flask: Approve with note
-    Flask->>Database: Reserve item and record decision atomically
-    Flask-->>Student: Approved; awaiting handover
-    Admin->>Flask: Confirm physical handover
-    Flask->>Database: Mark claim and item returned
-    Flask-->>Student: Return confirmation
+    participant Records
+    Student->>App: Submit report
+    App->>Records: Save pending private report
+    App-->>Admin: New report notification
+    Admin->>App: Approve publication with reason
+    App->>Records: Publish and record review
+    Student->>App: Submit ownership claim on found item
+    App-->>Admin: New claim notification
+    Admin->>App: Approve verified ownership
+    App->>Records: Reserve item and reject competing pending claims
+    Admin->>App: Set collection details
+    App-->>Student: Collection instructions
+    Admin->>App: Confirm physical handover
+    App->>Records: Mark item/claim returned
 ```
 
-## Security boundaries
+## Upgrading earlier databases
 
-The server treats all submitted fields as untrusted. Forms enforce lengths and valid choices. SQLAlchemy binds values, templates escape strings, and return URLs are restricted to local paths. All mutating routes require POST and CSRF tokens. Route checks restrict item editing, private claims, account management and moderation. Image bytes are decoded before they are accepted; storage filenames are generated, never user-controlled.
+The second Alembic migration adds publication/collection/audit fields, private report review history and campus settings without clearing records. Existing reports are backfilled approved because they were already published. The database default then changes to pending for future inserts, matching the model default. Existing claims and generic audit actions remain intact; no physical-return timestamp is invented for older records. Previously administrator-authored content is retained as history but cannot be manipulated through student routes.
 
-Role assignment is trusted only at local CLI account creation. Account disablement is checked while loading sessions. Administrative activity logging is useful for local review but is not an external tamper-proof audit service. The local operator has database/filesystem access and therefore remains a trusted actor.
+## Security and operational boundaries
+
+All state-changing web forms require CSRF. Registration cannot assign an administrator role. Permission checks run before student/admin actions and are not limited to menu visibility. Item details and image downloads share publication/hidden access rules. Claim proof is private to the claimant and administrators even if the public item later closes/hides. Ordinary finders cannot read another student's evidence.
+
+Images are decoded/re-encoded with generated storage names, size/pixel limits and stripped EXIF. HTML is escaped and SQL values are bound. CSV cells beginning with formula markers are neutralized; PDF text is escaped before formatting. Exports exclude evidence and are admin-only. Default deployment is one SQLite-backed local instance, with local upload storage and a persistent session key. Application activity records are not tamper-proof against the trusted filesystem operator.

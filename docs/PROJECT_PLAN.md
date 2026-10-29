@@ -60,3 +60,7 @@ Record date, participants, completed WBS tasks, evidence (commit/test/screenshot
 ## Suggested final presentation
 
 Problem and users → proposal scope → report/search demo → private claim and verification demo → handover distinction → architecture and database → test evidence → risks and limitations → learning and future improvements. This file supplies planning material; it is not a separate presentation deck or a completed academic final report.
+
+## Version 1.2.0 management review milestone
+
+Extend implementation package 3.4 to include the publication-review queue, private correction history, collection arrangements, student history/access controls, filtered exports and campus settings. Acceptance now requires student-only submission/claim routes and administrator-only management routes, plus report approval before public access. Add migration verification to package 4.1 and a PDF/table layout review to package 4.2. The administrator demo should start in the management dashboard, while a separate student session demonstrates submission and claiming.

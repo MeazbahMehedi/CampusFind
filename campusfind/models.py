@@ -51,6 +51,10 @@ class Item(db.Model):
     image = db.Column(db.String(120))
     illustration = db.Column(db.String(30), default="other")
     status = db.Column(db.String(30), nullable=False, default="reported", index=True)
+    review_status = db.Column(db.String(30), nullable=False, default="pending", index=True)
+    review_note = db.Column(db.Text, nullable=False, default="")
+    reviewed_by = db.Column(db.Integer, db.ForeignKey("user.id"))
+    reviewed_at = db.Column(db.DateTime)
     is_hidden = db.Column(db.Boolean, nullable=False, default=False)
     # The approved claim reserves an item; it does not confirm physical handover.
     reserved_claim_id = db.Column(db.Integer, nullable=True)
@@ -73,6 +77,9 @@ class Claim(db.Model):
     created_at = db.Column(db.DateTime, nullable=False, default=now)
     updated_at = db.Column(db.DateTime, nullable=False, default=now, onupdate=now)
     messages = db.relationship("ClaimMessage", backref="claim", order_by="ClaimMessage.created_at")
+    collection_point = db.Column(db.String(100), nullable=False, default="")
+    handover_note = db.Column(db.Text, nullable=False, default="")
+    returned_at = db.Column(db.DateTime)
 
 
 class ClaimMessage(db.Model):
@@ -97,6 +104,7 @@ class Notification(db.Model):
     title = db.Column(db.String(180), nullable=False)
     body = db.Column(db.Text, nullable=False)
     claim_id = db.Column(db.Integer, db.ForeignKey("claim.id"))
+    item_id = db.Column(db.Integer, db.ForeignKey("item.id"))
     is_read = db.Column(db.Boolean, nullable=False, default=False)
     created_at = db.Column(db.DateTime, nullable=False, default=now)
 
@@ -105,7 +113,12 @@ class Audit(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     actor_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     actor = db.relationship("User")
-    action = db.Column(db.String(200), nullable=False)
+    action = db.Column(db.Text, nullable=False)
+    object_type = db.Column(db.String(30), nullable=False, default="general")
+    object_id = db.Column(db.Integer)
+    previous_status = db.Column(db.String(80), nullable=False, default="")
+    next_status = db.Column(db.String(80), nullable=False, default="")
+    reason = db.Column(db.Text, nullable=False, default="")
     created_at = db.Column(db.DateTime, nullable=False, default=now)
 
 
@@ -113,3 +126,18 @@ class LoginAttempt(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     identity = db.Column(db.String(64), nullable=False, index=True)
     created_at = db.Column(db.DateTime, nullable=False, default=now, index=True)
+
+
+class CampusSetting(db.Model):
+    key = db.Column(db.String(50), primary_key=True)
+    value = db.Column(db.Text, nullable=False)
+
+
+class ReportReview(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    item_id = db.Column(db.Integer, db.ForeignKey("item.id"), nullable=False, index=True)
+    actor_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    actor = db.relationship("User")
+    action = db.Column(db.String(30), nullable=False)
+    note = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=now)

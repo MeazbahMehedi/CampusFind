@@ -53,3 +53,13 @@ If port 5000 is busy, set `PORT=5050` in `.env`. If a form expires, refresh the 
 The supplied app is ready for local coursework and a repository demonstration. Public institutional operation needs HTTPS/reverse proxy setup, `COOKIE_SECURE=true`, verified university identity or SSO, institutional privacy/retention decisions, backup/monitoring, abuse controls, ownership/handover procedures and capacity testing. Do not enable Flask debug mode on a public host. Docker files are included for convenience; no cloud deployment is performed by this release.
 
 The activity log is an application database record, not tamper-proof evidence against a trusted local operator. Uploaded visible-report photos are public. Administrators should remove inappropriate personal data from public reports through moderation and the institution's retention process. This version hides records rather than offering a full data-erasure/export service.
+
+## Version 1.2.0 management and migrations
+
+Run `python setup_project.py` without `--demo` to upgrade an existing installation. The migration preserves reports/claims/reviews/activity and backfills previously published reports as approved. New reports default to pending. Backup the complete instance directory with the server stopped before upgrading. Do not replace an existing database with a fresh one. In PowerShell use `.\start.bat` to restart.
+
+The management-only administrator cannot submit/edit student reports or submit/reply/withdraw ownership claims. Old administrator-owned records remain preserved, and independent administrators can review eligible legacy claims. Campus categories/locations/collection instructions live in database settings; developer/designer identity remains in JSON. Historical labels and approved collection details are not silently rewritten when options change.
+
+Report publication review and lifecycle are separate. Pending/correction/rejected records and images are restricted to author/admin. Closing/hiding cancels active claims; reopening preserves their prior decisions. Only physical-handover confirmation creates a new return timestamp. No timestamp is invented for older returned claims.
+
+CSV/PDF exports are administrator-only and use the same report filters as the analytics page. They omit private claim evidence. CSV uses UTF-8 with a BOM and neutralizes leading spreadsheet-formula characters. PDF uses the locally bundled DejaVu Sans font; its license is included. Submission-date filters use UTC; event dates in public browsing are separate. Export actions are recorded in the activity log.

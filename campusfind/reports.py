@@ -12,19 +12,27 @@ from flask import (
     send_from_directory,
     url_for,
 )
-from flask_login import current_user, login_required
+from flask_login import current_user
 from sqlalchemy import or_
 
 from .forms import ClaimForm, ItemForm, ModerateForm
-from .models import Claim, Item, db
-from .services import ACTIVE_CLAIMS, close_report, event, save_image
+from .models import Claim, Item, ReportReview, db
+from .services import (
+    ACTIVE_CLAIMS,
+    close_report,
+    event,
+    save_image,
+    student_required,
+    notify,
+    notify_admins,
+)
 
 bp = Blueprint("reports", __name__, url_prefix="/items")
 
 
 def get_visible(item_id):
     item = db.get_or_404(Item, item_id)
-    if item.is_hidden and not (
+    if (item.is_hidden or item.review_status != "approved") and not (
         current_user.is_authenticated
         and (current_user.is_admin or item.owner_id == current_user.id)
     ):
@@ -34,7 +42,7 @@ def get_visible(item_id):
 
 @bp.get("")
 def browse():
-    query = db.select(Item).where(Item.is_hidden.is_(False))
+    query = db.select(Item).where(Item.is_hidden.is_(False), Item.review_status == "approved")
     q = request.args.get("q", "").strip()[:120]
     if q:
         escaped = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
@@ -70,7 +78,7 @@ def browse():
 
 
 @bp.route("/new", methods=["GET", "POST"])
-@login_required
+@student_required
 def create():
     form = ItemForm()
     if request.method == "GET" and request.args.get("kind") in {"lost", "found"}:
@@ -95,9 +103,16 @@ def create():
         )
         db.session.add(item)
         db.session.flush()
-        event(item, f"{item.kind.capitalize()} item reported.")
+        event(item, f"{item.kind.capitalize()} report submitted for review.")
+        notify_admins("New report awaiting review", item.title, item_id=item.id)
+        notify(
+            current_user.id,
+            "Report submitted",
+            "Your report will appear publicly after administrator approval.",
+            item_id=item.id,
+        )
         db.session.commit()
-        flash("Your report is live. Thank you for helping your campus.", "success")
+        flash("Report submitted for administrator review. It is not public yet.", "success")
         return redirect(url_for("reports.detail", item_id=item.id))
     return render_template("item_form.html", form=form, editing=False)
 
@@ -106,7 +121,7 @@ def create():
 def detail(item_id):
     item = get_visible(item_id)
     own_claim = None
-    if current_user.is_authenticated:
+    if current_user.is_authenticated and not current_user.is_admin:
         own_claim = db.session.scalar(
             db.select(Claim).where(Claim.item_id == item.id, Claim.claimant_id == current_user.id)
         )
@@ -116,11 +131,19 @@ def detail(item_id):
         form=ClaimForm(),
         own_claim=own_claim,
         moderate_form=ModerateForm(),
+        reviews=db.session.scalars(
+            db.select(ReportReview)
+            .where(ReportReview.item_id == item.id)
+            .order_by(ReportReview.created_at)
+        ).all()
+        if current_user.is_authenticated
+        and (current_user.is_admin or item.owner_id == current_user.id)
+        else [],
     )
 
 
 @bp.route("/<int:item_id>/edit", methods=["GET", "POST"])
-@login_required
+@student_required
 def edit(item_id):
     item = get_visible(item_id)
     if item.owner_id != current_user.id:
@@ -152,16 +175,21 @@ def edit(item_id):
             if filename:
                 item.image = filename
             event(item, "Report details updated.")
+            item.review_status = "pending"
+            item.review_note = ""
+            item.reviewed_at = None
+            item.reviewed_by = None
+            notify_admins("Updated report awaiting review", item.title, item_id=item.id)
             db.session.commit()
             if filename and old_image:
                 (Path(current_app.config["UPLOAD_FOLDER"]) / old_image).unlink(missing_ok=True)
-            flash("Report updated.", "success")
+            flash("Report updated and resubmitted for administrator approval.", "success")
             return redirect(url_for("reports.detail", item_id=item.id))
     return render_template("item_form.html", form=form, editing=True, item=item)
 
 
 @bp.post("/<int:item_id>/close")
-@login_required
+@student_required
 def close(item_id):
     item = get_visible(item_id)
     if item.owner_id != current_user.id:

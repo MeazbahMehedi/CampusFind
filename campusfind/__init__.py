@@ -49,6 +49,8 @@ LABELS = {
     "approved": "Approved",
     "rejected": "Rejected",
     "withdrawn": "Withdrawn",
+    "needs_changes": "Corrections requested",
+    "published": "Published",
 }
 
 
@@ -101,6 +103,7 @@ def create_app(test_config=None):
 
     config_path = Path(app.root_path).parent / "config" / "developer.json"
     developer = json.loads(config_path.read_text(encoding="utf-8"))
+    app.config["PROJECT_BRAND"] = developer
     for field in ["github_url", "linkedin_url", "website"]:
         value = developer.get(field, "")
         if value and urlsplit(value).scheme not in {"http", "https"}:
@@ -120,6 +123,9 @@ def create_app(test_config=None):
 
     @app.context_processor
     def context():
+        from .settings import campus_settings
+
+        settings = campus_settings()
         unread = 0
         if current_user.is_authenticated:
             unread = db.session.scalar(
@@ -129,11 +135,12 @@ def create_app(test_config=None):
             )
         return dict(
             brand=developer,
-            categories=CATEGORIES,
-            locations=LOCATIONS,
+            categories=settings["categories"],
+            locations=settings["locations"],
+            campus=settings,
             labels=LABELS,
             unread_count=unread,
-            version="1.1.0",
+            version="1.2.0",
         )
 
     @app.after_request
