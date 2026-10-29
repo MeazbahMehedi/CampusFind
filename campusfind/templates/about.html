@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% from 'macros.html' import icon %}
+{% block title %}About the project{% endblock %}
+{% block breadcrumb %}About the project{% endblock %}
+{% block content %}
+<section class="about-hero">
+  <span class="pill">{{ icon('heart', 16) }} BUILT FOR A MORE CONNECTED CAMPUS</span>
+  <h1>Small acts.<br><span class="teal">Meaningful returns.</span></h1>
+  <p>{{ brand.project_name }} brings lost reports, found belongings, and careful ownership checks into one shared place.</p>
+</section>
+<div class="two-columns">
+  <section class="panel">
+    <div class="stat-icon mint">{{ icon('box', 24) }}</div>
+    <h2>Good things find their way back.</h2>
+    <p>A missing notebook, a forgotten bag, or a set of keys can interrupt your whole day. {{ brand.project_name }} gives your campus community a simple way to help.</p>
+    <p>Share a lost or found report, search nearby listings, and follow the progress from the first connection to the final return.</p>
+  </section>
+  <section class="panel">
+    <div class="stat-icon blue">{{ icon('shield', 24) }}</div>
+    <h2>A thoughtful path home.</h2>
+    <p>Recognize an item? Send a private ownership claim with identifying details. An administrator will review it and ask for more information when needed.</p>
+    <p>Once ownership is verified, the administrator helps organize the handover and confirms when the item has reached its owner.</p>
+    <a class="text-link" href="{{ url_for('reports.browse') }}">Explore campus reports {{ icon('arrow', 16) }}</a>
+  </section>
+</div>
+<div class="section-heading mt-lg">
+  <div><p class="eyebrow">DEVELOPMENT & DESIGN</p><h2>People behind the project.</h2><p>Created with care for a campus that looks out for each other.</p></div>
+</div>
+<div class="team-grid team-pair">
+  {% for member in brand.team %}
+  <article class="panel team-card">
+    {% if member.avatar_path %}<img class="team-photo" src="{{ url_for('static', filename=member.avatar_path) }}" alt="{{ member.name }}">{% else %}<div class="team-avatar">{{ member.name.split()[0][:1] }}{{ member.name.split()[-1][:1] if member.name.split()|length > 1 else '' }}</div>{% endif %}
+    <h3>{{ member.name }}</h3><p class="team-role">{{ member.role }}</p>
+    {% if member.bio %}<p class="team-bio">{{ member.bio }}</p>{% endif %}
+    <div class="button-row wrap">
+      {% if member.github_url %}<a class="btn secondary small" href="{{ member.github_url }}" target="_blank" rel="noopener noreferrer">{{ icon('github', 17) }} {{ member.github_username or 'GitHub' }} {{ icon('arrow-up-right', 15) }}</a>{% endif %}
+      {% if member.linkedin_url %}<a class="btn secondary small" href="{{ member.linkedin_url }}" target="_blank" rel="noopener noreferrer">LinkedIn {{ icon('arrow-up-right', 15) }}</a>{% endif %}
+      {% if member.website %}<a class="btn secondary small" href="{{ member.website }}" target="_blank" rel="noopener noreferrer">Website {{ icon('arrow-up-right', 15) }}</a>{% endif %}
+      {% if member.email %}<a class="btn secondary small" href="mailto:{{ member.email }}">Email</a>{% endif %}
+    </div>
+  </article>
+  {% endfor %}
+</div>
+{% endblock %}

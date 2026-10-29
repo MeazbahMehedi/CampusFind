@@ -1,0 +1,38 @@
+{% macro icon(name, size=20) -%}
+  <svg class="icon"
+       width="{{ size }}"
+       height="{{ size }}"
+       aria-hidden="true">
+    <use href="{{ url_for('static', filename='img/icons.svg') }}#{{ name }}"></use>
+  </svg>
+{%- endmacro %}
+{% macro badge(status) %}<span class="badge status-{{ status }}">{{ labels.get(status, status|replace('_',' ')|title) }}</span>{% endmacro %}
+{% macro field(input, help='') %}
+  <div class="field">{{ input.label }}{{ input(class_='input' + (' invalid' if input.errors else ''), **kwargs) }}{% if help %}<small>{{ help }}</small>{% endif %}{% for error in input.errors %}<span class="field-error" role="alert">{{ error }}</span>{% endfor %}</div>
+{% endmacro %}
+{% macro item_image(item, cls='') %}
+  <img class="{{ cls }}"
+       src="{{ url_for('reports.image', filename=item.image) if item.image else url_for('static', filename='img/items/' ~ (item.illustration or 'other') ~ '.svg') }}"
+       alt="{{ item.title }}{{ ' — illustration, no photo provided' if not item.image else '' }}"
+       loading="lazy">
+{% endmacro %}
+{% macro item_card(item) %}
+  <article class="item-card">
+    <a class="item-art art-{{ item.illustration or 'other' }}"
+       href="{{ url_for('reports.detail', item_id=item.id) }}">{{ item_image(item) }}<span class="kind-tag {{ item.kind }}"><span class="dot"></span>{{ item.kind|capitalize }} item</span>{% if not item.image %}<span class="illustration-label">Illustration</span>{% endif %}</a>
+    <div class="item-body">
+      <div class="item-meta"><span>{{ item.category }}</span><span>#{{ '%04d'|format(item.id) }}</span></div>
+      <h3><a href="{{ url_for('reports.detail', item_id=item.id) }}">{{ item.title }}</a></h3>
+      <p class="location">{{ icon('pin', 15) }} {{ item.location }}</p>
+      <div class="item-bottom"><span>{{ item.event_date.strftime("%d %b %Y") }}</span>{{ badge(item.status) }}</div>
+    </div>
+  </article>
+{% endmacro %}
+{% macro empty(title, text, link='', action='Browse items') %}
+  <div class="empty"><div class="empty-icon">{{ icon('search', 30) }}</div><h3>{{ title }}</h3><p>{{ text }}</p>{% if link %}<a href="{{ link }}" class="btn secondary">{{ action }} {{ icon("arrow") }}</a>{% endif %}</div>
+{% endmacro %}
+{% macro pagination(page, endpoint, params={}) %}
+  {% if page.pages > 1 %}<nav class="pagination" aria-label="Pagination">{% if page.has_prev %}<a class="btn secondary small"
+   href="{{ url_for(endpoint, page=page.prev_num, **params) }}">Previous</a>{% endif %}<span>Page {{ page.page }} of {{ page.pages }}</span>{% if page.has_next %}<a class="btn secondary small"
+   href="{{ url_for(endpoint, page=page.next_num, **params) }}">Next {{ icon('arrow', 16) }}</a>{% endif %}</nav>{% endif %}
+{% endmacro %}

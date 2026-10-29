@@ -1,0 +1,76 @@
+{% from 'macros.html' import icon %}
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description"
+      content="Report, discover, and recover lost belongings on your campus."><meta name="color-scheme" content="light dark"><title>{% block title %}{{ brand.project_name }}{% endblock %} · Campus lost & found</title><link rel="icon"
+      href="{{ url_for('static',filename='img/logo.svg') }}"
+      type="image/svg+xml"><link rel="stylesheet"
+      href="{{ url_for('static',filename='css/app.css') }}"><script src="{{ url_for('static',filename='js/theme.js') }}"></script><script defer src="{{ url_for('static',filename='js/app.js') }}"></script></head>
+<body>
+  <a href="#main" class="skip-link">Skip to content</a>
+  <aside class="sidebar" id="sidebar" aria-label="Main navigation">
+    <a class="brand" href="{{ url_for('views.home') }}">
+    <img src="{{ url_for('static',filename=brand.logo_path) }}"
+         width="36"
+         height="36"
+         alt=""><span>{{ brand.project_name }}<small>THE CAMPUS CONNECTION</small></span></a>
+    <div class="workspace-label"><span class="workspace-dot"></span> Campus community <span class="version-label">v{{ version }}</span></div>
+    <span class="nav-heading">DISCOVER</span>
+    <nav>
+      {% set ep = request.endpoint or '' %}
+      <a class="nav-link {{ 'active' if ep=='views.home' }}"
+         href="{{ url_for('views.home') }}">{{ icon("home") }}Overview</a>
+      <a class="nav-link {{ 'active' if ep=='reports.browse' }}"
+         href="{{ url_for('reports.browse') }}">{{ icon("grid") }}Browse items</a>
+      <a class="nav-link {{ 'active' if ep=='reports.create' }}"
+         href="{{ url_for('reports.create') }}">{{ icon("plus-circle") }}Report an item</a>
+      {% if current_user.is_authenticated %}
+        <span class="nav-heading">YOUR WORKSPACE</span>
+        <a class="nav-link {{ 'active' if ep=='views.dashboard' }}"
+           href="{{ url_for('views.dashboard') }}">{{ icon("dashboard") }}My dashboard</a>
+        <a class="nav-link {{ 'active' if ep=='views.notifications' }}"
+           href="{{ url_for('views.notifications') }}">{{ icon("bell") }}Notifications{% if unread_count %}<span class="nav-count">{{ unread_count }}</span>{% endif %}</a>
+        {% if current_user.is_admin %}<span class="nav-heading">ADMINISTRATION</span><a class="nav-link {{ 'active' if ep.startswith('admin.') }}"
+   href="{{ url_for('admin.overview') }}">{{ icon("shield") }}Admin console</a>{% endif %}
+      {% endif %}
+      <span class="nav-heading">COMMUNITY</span><a class="nav-link {{ 'active' if ep=='views.about' }}"
+   href="{{ url_for('views.about') }}">{{ icon("heart") }}About the project</a>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="help-card">
+        {{ icon('spark', 24) }}<strong>A small act. A big difference.</strong>
+        <p>Found something? A quick report could make someone's day.</p>
+        <a href="{{ url_for('reports.create',kind='found') }}">Help it find home {{ icon('arrow', 16) }}</a>
+      </div>
+      {% if current_user.is_authenticated %}<div class="sidebar-profile"><a class="avatar" href="{{ url_for('auth.profile') }}">{{ current_user.name[:1]|upper }}</a><a class="profile-name" href="{{ url_for('auth.profile') }}"><strong>{{ current_user.name }}</strong><small>{{ current_user.role|title }} account</small></a><form method="post" action="{{ url_for('auth.logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="icon-btn" aria-label="Sign out" title="Sign out">{{ icon('logout', 18) }}</button></form></div>{% else %}<a class="btn primary full" href="{{ url_for('auth.login') }}">Choose your login {{ icon('arrow', 16) }}</a>{% endif %}
+    </div>
+  </aside>
+  <div class="sidebar-scrim" data-close-menu></div>
+  <div class="app-shell"><header class="topbar"><div class="topbar-left"><button class="icon-btn menu-toggle"
+        aria-controls="sidebar"
+        aria-expanded="false"
+        aria-label="Open navigation">{{ icon("menu") }}</button><span class="breadcrumb">Campus workspace <span>/</span> {% block breadcrumb %}Overview{% endblock %}</span></div><div class="topbar-actions"><span class="community-pill"><span class="dot"></span>Better together</span><button class="icon-btn theme-toggle"
+        aria-label="Toggle color theme"
+        title="Toggle color theme">{{ icon("sun") }}</button>{% if current_user.is_authenticated %}<a class="icon-btn notification-button"
+   href="{{ url_for('views.notifications') }}"
+   aria-label="Notifications{% if unread_count %}, {{ unread_count }} unread{% endif %}">{{ icon("bell") }}{% if unread_count %}<span class="unread-dot"></span>{% endif %}</a>{% else %}<a class="btn secondary small" href="{{ url_for('auth.login') }}">Sign in</a>{% endif %}</div></header>
+    <main id="main" class="main-content">
+      {% with messages=get_flashed_messages(with_categories=true) %}{% if messages %}<div class="flash-stack" role="status">{% for category,message in messages %}<div class="flash {{ category }}">{{ icon('info', 18) }}<span>{{ message }}</span><button class="icon-btn dismiss-flash" aria-label="Dismiss message">{{ icon('x', 16) }}</button></div>{% endfor %}</div>{% endif %}{% endwith %}
+      {% block content %}{% endblock %}
+    </main>
+    <footer class="footer">
+      <span>{{ brand.copyright }} · {{ brand.project_name }}</span><span>Designed & developed by {{ brand.team | map(attribute="name") | join(" & ") }}</span>
+    </footer>
+  </div>
+  <dialog id="confirm-dialog">
+    <form method="dialog">
+      <div class="dialog-icon">{{ icon('info', 26) }}</div>
+      <h2>Please confirm</h2>
+      <p id="confirm-message"></p>
+      <div class="button-row">
+        <button class="btn secondary"
+                value="cancel">Cancel</button><button class="btn primary"
+        value="confirm">Continue</button>
+      </div>
+    </form>
+  </dialog>
+</body>
+</html>

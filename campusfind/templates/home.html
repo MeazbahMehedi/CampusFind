@@ -1,0 +1,95 @@
+{% extends "base.html" %}{% from 'macros.html' import icon,item_card,empty %}
+{% block title %}Overview{% endblock %}
+{% block content %}
+  <section class="page-heading">
+    <div>
+      <p class="eyebrow">YOUR CAMPUS. YOUR COMMUNITY.</p>
+      <h1>A little help goes a long way<span class="teal">.</span></h1>
+      <p>Lost something important? Found something that matters? You're in the right place.</p>
+    </div>
+    <a href="{{ url_for('reports.create') }}" class="btn primary">{{ icon('plus', 18) }} Report an item</a>
+  </section>
+  <section class="hero">
+    <div class="hero-copy">
+      <div class="hero-kicker"><span class="dot"></span> CONNECTING BELONGINGS WITH THEIR PEOPLE</div>
+      <h2>
+        Good things find
+        <br>
+        their way <em>back.</em>
+      </h2>
+      <p>
+        A forgotten notebook. Your favorite headphones.
+        <br>
+        Let's bring the things you love back home.
+      </p>
+      <form class="hero-search"
+            action="{{ url_for('reports.browse') }}"
+            role="search">
+        <label class="sr-only" for="hero-q">Search lost and found items</label>{{ icon('search', 21) }}<input id="hero-q"
+       name="q"
+       maxlength="120"
+       placeholder="What are you looking for?"><button class="btn primary" type="submit">Find an item {{ icon('arrow', 18) }}</button>
+      </form>
+      <div class="hero-hints"><span>Try searching:</span><a href="{{ url_for('reports.browse',q='backpack') }}">Backpack</a><a href="{{ url_for('reports.browse',q='keys') }}">Keys</a><a href="{{ url_for('reports.browse',q='card') }}">Student card</a></div>
+    </div>
+    <div class="hero-visual">
+      <img src="{{ url_for('static',filename='img/hero.svg') }}"
+           alt="Illustration of a backpack, notebook, keys, and a location pin connected by a dotted path"><span class="hero-note">A campus that looks out for each other.</span>
+    </div>
+  </section>
+  <section class="stat-grid" aria-label="Campus report statistics">
+    <div class="stat-card">
+      <div class="stat-icon amber">{{ icon('search', 22) }}</div>
+      <div><span>Looking for their owners</span><strong>{{ stats.found }}</strong><small>Open found-item reports</small></div>
+      {{ icon('arrow-up-right', 18) }}
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon blue">{{ icon('pin', 22) }}</div>
+      <div><span>Let's help find them</span><strong>{{ stats.lost }}</strong><small>Open lost-item reports</small></div>
+      {{ icon('arrow-up-right', 18) }}
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon mint">{{ icon('check-circle', 22) }}</div>
+      <div><span>Back where they belong</span><strong>{{ stats.returned }}</strong><small>Confirmed returns</small></div>
+      {{ icon('heart', 18) }}
+    </div>
+  </section>
+  <section class="quick-actions">
+    <a href="{{ url_for('reports.create',kind='lost') }}">
+      <div class="quick-icon blue">{{ icon('search', 22) }}</div>
+      <div>
+        <h3>I lost something</h3>
+        <p>Tell the community what you're missing.</p>
+      </div>
+      {{ icon('arrow', 20) }}</a><a href="{{ url_for('reports.create',kind='found') }}">
+      <div class="quick-icon mint">{{ icon('box', 22) }}</div>
+      <div>
+        <h3>I found something</h3>
+        <p>Help someone get their belongings back.</p>
+      </div>
+      {{ icon('arrow', 20) }}</a>
+    </section>
+    <section><div class="section-heading"><div><p class="eyebrow">A LITTLE CLOSER TO HOME</p><h2>Recently reported</h2><p>A quick look could make all the difference.</p></div><a class="text-link" href="{{ url_for('reports.browse') }}">View all items {{ icon('arrow', 17) }}</a></div><div class="category-links"><a class="category-chip selected" href="{{ url_for('reports.browse') }}">{{ icon('grid', 16) }} All items</a>{% for category in categories[:5] %}<a class="category-chip"
+   href="{{ url_for('reports.browse',category=category) }}">{{ category }}</a>{% endfor %}</div>{% if items %}<div class="item-grid">{% for item in items %}{{ item_card(item) }}{% endfor %}</div>{% else %}{{ empty('Your campus story starts here','Be the first to report a lost or found belonging.',url_for('reports.create'),'Report an item') }}{% endif %}</section>
+    <section class="how-panel">
+      <div>
+        <p class="eyebrow">SIMPLE STEPS. REAL CONNECTIONS.</p>
+        <h2>From lost to found.</h2>
+        <p>A thoughtful process that keeps ownership checks private.</p>
+      </div>
+      <ol>
+        <li>
+          <span>01</span><strong>Share the details</strong>
+          <p>Report what was lost or found.</p>
+        </li>
+        <li>
+          <span>02</span><strong>Make a connection</strong>
+          <p>Search listings and submit a claim.</p>
+        </li>
+        <li>
+          <span>03</span><strong>Bring it home</strong>
+          <p>Verify ownership and confirm return.</p>
+        </li>
+      </ol>
+    </section>
+{% endblock %}

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% from 'macros.html' import icon, field %}
+{% set admin_mode = login_role|default('student') == 'admin' %}
+{% block title %}{{ 'Create an account' if register else 'Administrator login' if admin_mode else 'Student login' }}{% endblock %}
+{% block breadcrumb %}{{ 'Register' if register else 'Administrator login' if admin_mode else 'Student login' }}{% endblock %}
+{% block content %}
+<div class="auth-layout">
+  <section class="auth-story">
+    <span class="pill">{{ icon('heart', 16) }} A campus that cares</span>
+    <h1>{% if admin_mode %}A careful review.<br>A happy return.<br><span class="teal">A better campus.</span>{% else %}Your things.<br>Your people.<br><span class="teal">Your campus.</span>{% endif %}</h1>
+    <p>{{ 'Help students reconnect with their belongings through thoughtful ownership checks and organized handovers.' if admin_mode else 'A small community effort can bring something important back into your day.' }}</p>
+    <img src="{{ url_for('static', filename='img/hero.svg') }}" alt="Illustrated campus belongings">
+    <div class="trust-note">{{ icon('shield', 20) }} Ownership evidence stays private.</div>
+  </section>
+  <section class="panel auth-panel">
+    <p class="eyebrow">{{ 'JOIN THE COMMUNITY' if register else 'CAMPUS ADMINISTRATION' if admin_mode else 'YOUR CAMPUS CONNECTION' }}</p>
+    <h2>{{ 'Make yourself at home.' if register else 'Administrator sign in.' if admin_mode else 'Welcome back.' }}</h2>
+    <p>{{ 'Create your student account to report belongings and track claims.' if register else 'Review claims, manage reports, and help belongings find their way home.' if admin_mode else 'Sign in to report belongings, follow your claims, and see the latest updates.' }}</p>
+    {% if not register %}
+    <nav class="login-options" aria-label="Choose your login type">
+      <a class="login-option {{ 'selected' if not admin_mode }}" href="{{ url_for('auth.login', next=request.args.get('next')) }}" {% if not admin_mode %}aria-current="page"{% endif %}>
+        {{ icon('dashboard', 21) }}<span>Login as Student<small>Reports & personal claims</small></span>
+      </a>
+      <a class="login-option {{ 'selected' if admin_mode }}" href="{{ url_for('auth.admin_login', next=request.args.get('next')) }}" {% if admin_mode %}aria-current="page"{% endif %}>
+        {{ icon('shield', 21) }}<span>Login as Administrator<small>Reviews & campus management</small></span>
+      </a>
+    </nav>
+    {% endif %}
+    <form method="post" class="stack-form">
+      {{ form.hidden_tag() }}
+      {% if register %}{{ field(form.name, autocomplete='name', placeholder='Your full name') }}{% endif %}
+      {{ field(form.email, autocomplete='username', placeholder='Your administrator email' if admin_mode else 'you@example.com') }}
+      {{ field(form.password, 'At least 10 characters.' if register else '', autocomplete='new-password' if register else 'current-password', placeholder='Your password') }}
+      {% if register %}{{ field(form.confirm, autocomplete='new-password', placeholder='Repeat your password') }}{% endif %}
+      <button class="btn primary full">{{ 'Create student account' if register else 'Sign in as Administrator' if admin_mode else 'Sign in as Student' }} {{ icon('arrow', 18) }}</button>
+    </form>
+    {% if admin_mode %}
+      <p class="auth-switch">Here to report or recover an item? <a href="{{ url_for('auth.login') }}">Student login</a></p>
+      <div class="form-note">{{ icon('shield', 17) }} Administrator access is available to authorized campus staff.</div>
+    {% else %}
+      <p class="auth-switch">{{ 'Already part of the community?' if register else 'New to CampusFind?' }} <a href="{{ url_for('auth.login') if register else url_for('auth.register') }}">{{ 'Student login' if register else 'Create a student account' }}</a></p>
+      <div class="form-note">{{ icon('info', 17) }} {{ 'Keep your account details private and choose a password you do not use elsewhere.' if register else 'Need help accessing your account? Contact your campus administrator.' }}</div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}
