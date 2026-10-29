@@ -1,0 +1,12 @@
+<form class="filter-panel management-filters" method="get">
+ <div class="filter-search">{{ icon('search') }}<label class="sr-only" for="report-q">Search reports</label><input id="report-q" name="q" value="{{ request.args.get('q','') }}" placeholder="Search item names and descriptions" maxlength="120"><button class="btn primary">Apply filters</button></div>
+ <div class="filter-grid">
+ {% for key,label,options in [('review_status','Publication review',[('','All reviews'),('pending','Pending review'),('needs_changes','Corrections requested'),('approved','Published'),('rejected','Rejected')]),('status','Lifecycle',[('','All states'),('active','Active listings'),('reported','Reported'),('claim_pending','Claim pending'),('awaiting_handover','Awaiting handover'),('returned','Returned'),('closed','Closed')]),('kind','Type',[('','Lost & found'),('lost','Lost'),('found','Found')]),('hidden','Visibility',[('','All visibility'),('0','Non-hidden only'),('1','Hidden only')])] %}
+ <div class="field"><label for="filter-{{ key }}">{{ label }}</label><select id="filter-{{ key }}" name="{{ key }}" class="input">{% for value,text in options %}<option value="{{ value }}" {{ 'selected' if request.args.get(key,'')==value }}>{{ text }}</option>{% endfor %}</select></div>
+ {% endfor %}
+ </div>
+ <details class="advanced-filters" {{ 'open' if request.args.get('from_date') or request.args.get('to_date') or request.args.get('category') or request.args.get('location') }}><summary>Categories, locations & submission dates {{ icon('chevron-down',16) }}</summary><div class="filter-grid">
+ {% for key,label,options in [('category','Category',categories),('location','Location',locations)] %}<div class="field"><label for="filter-{{ key }}">{{ label }}</label><select id="filter-{{ key }}" class="input" name="{{ key }}"><option value="">All</option>{% for value in options %}<option {{ 'selected' if request.args.get(key)==value }}>{{ value }}</option>{% endfor %}</select></div>{% endfor %}
+ <div class="field"><label for="filter-from">Submitted from</label><input id="filter-from" class="input" name="from_date" type="date" value="{{ request.args.get('from_date','') }}"></div><div class="field"><label for="filter-to">Submitted to</label><input id="filter-to" class="input" name="to_date" type="date" value="{{ request.args.get('to_date','') }}"></div></div></details>
+ <div class="filter-footer"><span>Submission dates use UTC. Filters also apply to exports.</span><a class="text-link" href="{{ url_for(request.endpoint) }}">Clear filters</a></div>
+</form>

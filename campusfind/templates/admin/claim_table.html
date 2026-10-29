@@ -1,0 +1,3 @@
+<div class="table-scroll"><table><thead><tr><th>Claim / item</th><th>Student</th><th>Status</th><th>Submitted</th><th></th></tr></thead><tbody>
+{% for claim in claims %}<tr><td><strong>{{ claim.item.title }}</strong><small>Claim #{{ claim.id }} · Report #{{ claim.item_id }}</small></td><td><a class="text-link" href="{{ url_for('admin.student',user_id=claim.claimant_id) }}">{{ claim.claimant.name }}</a></td><td>{{ badge(claim.status) }}</td><td>{{ claim.created_at.strftime('%d %b %Y') }}</td><td><a class="text-link" href="{{ url_for('claims.detail',claim_id=claim.id) }}">Review {{ icon('arrow',16) }}</a></td></tr>{% else %}<tr><td colspan="5">No claims match this queue.</td></tr>{% endfor %}
+</tbody></table></div>
